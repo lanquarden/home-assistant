@@ -9,6 +9,7 @@ import re
 
 import requests
 import voluptuous as vol
+import time
 
 import homeassistant.helpers.config_validation as cv
 from homeassistant.components.device_tracker import (
@@ -65,11 +66,14 @@ class DdWrtDeviceScanner(DeviceScanner):
         if host:
             self.host = host
             self.aps = []
+            self.ssh_connections = {host: None}
         elif hosts:
             self.host = hosts[0]
             self.aps = []
             if len(hosts) > 1:
                 self.aps = hosts[1:]
+                self.ssh_connections = {host: None for host in hosts[1:]}
+            self.ssh_connections[hosts[0]] = None
         self.username = config[CONF_USERNAME]
         self.password = config.get(CONF_PASSWORD, '')
         self.protocol = config[CONF_PROTOCOL]
@@ -156,17 +160,26 @@ class DdWrtDeviceScanner(DeviceScanner):
 
     def ssh_connection(self, host, cmds):
         """Retrieve data from DD-WRT by ssh."""
-        from pexpect import pxssh, exceptions
+        # check if we have a connection
+        if not self.ssh_connections[host]:
+            from pexpect import pxssh, exceptions
 
-        ssh = pxssh.pxssh()
-        try:
-            ssh.login(host, self.username, **self.ssh_secret)
-        except exceptions.EOF as err:
-            _LOGGER.error('Connection refused. Is SSH enabled?')
-            return None
-        except pxssh.ExceptionPxssh as err:
-            _LOGGER.error('Unable to connect via SSH: %s', str(err))
-            return None
+            ssh = pxssh.pxssh()
+            try:
+                start = time.time()
+                ssh.login(host, self.username, **self.ssh_secret)
+                msg = 'Login time: {}'.format(str(time.time() - start))
+                _LOGGER.debug(msg)
+            except exceptions.EOF as err:
+                _LOGGER.error('Connection refused. Is SSH enabled?')
+                return None
+            except pxssh.ExceptionPxssh as err:
+                _LOGGER.error('Unable to connect via SSH: %s', str(err))
+                return None
+            # set ssh connection
+            self.ssh_connections[host] = ssh
+        else:
+            ssh = self.ssh_connections[host]
 
         try:
             output = []
@@ -175,16 +188,19 @@ class DdWrtDeviceScanner(DeviceScanner):
                     long_command = True
                 else:
                     long_command = False
+                start = time.time()
                 ssh.sendline(cmd)
                 ssh.prompt()
+                msg = 'Command time: {}'.format(str(time.time() - start))
+                _LOGGER.debug(msg)
                 output.append(_parse_ssh_output(ssh.before, long_command))
-            ssh.logout()
             msg = 'Commands {0} in {1} returned {2}'
             _LOGGER.debug(msg.format(str(cmds), host, str(output)))
             return output
 
         except pxssh.ExceptionPxssh as exc:
             _LOGGER.error('Unexpected response from router: %s', exc)
+            self.ssh_connections[host] = ssh
             return None
 
     def get_ddwrt_data(self):

@@ -197,10 +197,15 @@ class DdWrtDeviceScanner(DeviceScanner):
             msg = 'Commands {0} in {1} returned {2}'
             _LOGGER.debug(msg.format(str(cmds), host, str(output)))
             return output
-
         except pxssh.ExceptionPxssh as exc:
             _LOGGER.error('Unexpected response from router: %s', exc)
-            self.ssh_connections[host] = ssh
+            # force reconnect
+            self.ssh_connections[host] = None
+            return None
+        except exceptions.EOF as exc:
+            _LOGGER.error('Received unexpected EOF while issuing command: %s', exc)
+            # force reconnect
+            self.ssh_connection[host] = None
             return None
 
     def get_ddwrt_data(self):

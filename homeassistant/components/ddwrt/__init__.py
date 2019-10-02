@@ -16,13 +16,12 @@ from homeassistant.helpers.discovery import async_load_platform
 
 _LOGGER = logging.getLogger(__name__)
 
-CONF_PUB_KEY = "pub_key"
 CONF_REQUIRE_IP = "require_ip"
 CONF_SENSORS = "sensors"
 CONF_SSH_KEY = "ssh_key"
 
 DOMAIN = "asuswrt"
-DATA_ASUSWRT = DOMAIN
+DATA_DDWRT = DOMAIN
 DEFAULT_SSH_PORT = 22
 
 SECRET_GROUP = "Password or SSH Key"
@@ -38,7 +37,6 @@ ASUSWRT_SCHEMA = vol.Schema(
         vol.Optional(CONF_REQUIRE_IP, default=True): cv.boolean,
         vol.Exclusive(CONF_PASSWORD, SECRET_GROUP): cv.string,
         vol.Exclusive(CONF_SSH_KEY, SECRET_GROUP): cv.isfile,
-        vol.Exclusive(CONF_PUB_KEY, SECRET_GROUP): cv.isfile,
         vol.Optional(CONF_SENSORS): vol.All(
             cv.ensure_list, [vol.In(SENSOR_TYPES)]
         ),
@@ -57,24 +55,19 @@ async def async_setup(hass, config):
     from aioddwrt.ddwrt import DdWrt
 
     conf = config[DOMAIN]
+    if not isinstance(conf, list):
+        conf = [conf]
 
-    api = DdWrt(
-        conf[CONF_HOST],
-        conf.get(CONF_PORT),
-        conf.get(CONF_PROTOCOL) == "telnet",
-        conf[CONF_USERNAME],
-        conf.get(CONF_PASSWORD, ""),
-        conf.get("ssh_key", conf.get("pub_key", "")),
-        conf.get(CONF_MODE),
-        conf.get(CONF_REQUIRE_IP),
-        )
+    devices = []
+    for dev_conf in conf:
+        device = DdWrt(dev_conf)
+        await device.ansync_connect()
+        if not device.is_connected:
+            _LOGGER.error("Unable to setup ddwrt component")
+            return False
+        devices.append(device)
 
-    await api.connection.async_connect()
-    if not api.is_connected:
-        _LOGGER.error("Unable to setup asuswrt component")
-        return False
-
-    hass.data[DATA_ASUSWRT] = api
+    hass.data[DATA_DDWRT] = devices
 
     hass.async_create_task(
         async_load_platform(

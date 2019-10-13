@@ -27,11 +27,12 @@ DEFAULT_SSH_PORT = 22
 SECRET_GROUP = "Password or SSH Key"
 SENSOR_TYPES = ["upload_speed", "download_speed", "download", "upload"]
 
-ASUSWRT_SCHEMA = vol.Schema(
+DDWRT_SCHEMA = vol.Schema(
     {
         vol.Required(CONF_HOST): cv.string,
         vol.Required(CONF_USERNAME): cv.string,
-        vol.Optional(CONF_PROTOCOL, default="ssh"): vol.In(["ssh", "telnet"]),
+        vol.Optional(CONF_PROTOCOL, default="http"):
+            vol.In(["ssh", "telnet", "http"]),
         vol.Optional(CONF_MODE, default="router"): vol.In(["router", "ap"]),
         vol.Optional(CONF_PORT, default=DEFAULT_SSH_PORT): cv.port,
         vol.Optional(CONF_REQUIRE_IP, default=True): cv.boolean,
@@ -44,7 +45,7 @@ ASUSWRT_SCHEMA = vol.Schema(
 )
 CONFIG_SCHEMA = vol.Schema(
     {
-        DOMAIN: vol.Any(ASUSWRT_SCHEMA, [ASUSWRT_SCHEMA]),
+        DOMAIN: vol.Any(DDWRT_SCHEMA, [DDWRT_SCHEMA]),
     },
     extra=vol.ALLOW_EXTRA,
 )

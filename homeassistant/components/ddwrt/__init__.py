@@ -62,7 +62,7 @@ async def async_setup(hass, config):
     equipment = []
     for dev_conf in conf:
         device = DdWrt(dev_conf)
-        await device.ansync_connect()
+        await device.async_get_wl()
         if not device.is_connected:
             _LOGGER.error("Unable to setup ddwrt component")
             return False

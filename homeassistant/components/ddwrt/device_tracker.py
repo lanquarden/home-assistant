@@ -64,7 +64,7 @@ class DdWrtDeviceScanner(DeviceScanner):
         return self.cache[device]
 
     async def async_update_cache(self):
-        """Updating the extra information cache."""
+        """Update the extra information cache."""
         self.cache = {}
         for device in self.equipment:
             if device.mode == 'router':

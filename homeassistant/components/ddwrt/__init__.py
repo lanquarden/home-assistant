@@ -59,16 +59,16 @@ async def async_setup(hass, config):
     if not isinstance(conf, list):
         conf = [conf]
 
-    devices = []
+    equipment = []
     for dev_conf in conf:
         device = DdWrt(dev_conf)
         await device.ansync_connect()
         if not device.is_connected:
             _LOGGER.error("Unable to setup ddwrt component")
             return False
-        devices.append(device)
+        equipment.append(device)
 
-    hass.data[DATA_DDWRT] = devices
+    hass.data[DATA_DDWRT] = equipment
 
     hass.async_create_task(
         async_load_platform(

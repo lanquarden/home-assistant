@@ -19,34 +19,52 @@ class DdWrtDeviceScanner(DeviceScanner):
     """This class queries a router running DDWRT firmware."""
 
     # Eighth attribute needed for mode (AP mode vs router mode)
-    def __init__(self, api):
+    def __init__(self, equipment):
         """Initialize the scanner."""
-        self.last_results = {}
+        self.cache = {}
         self.success_init = False
-        self.connection = api
+        self.equipment = equipment
 
     async def async_connect(self):
         """Initialize connection to the router."""
-        # Test the router is accessible.
-        data = await self.connection.async_get_connected_devices()
-        self.success_init = data is not None
+        # Test connection to all routers and aps.
+        self.success_init = True
+        for device in self.equipment:
+            _ = await device.async_get_wl()
+            if not device.is_connected:
+                self.success_init = False
 
     async def async_scan_devices(self):
         """Scan for new devices and return a list with found device IDs."""
-        await self.async_update_info()
-        return list(self.last_results.keys())
+        detected = []
+        _LOGGER.debug("Scanning devices on DDWRT")
+        for device in self.equipment:
+            detected.extend(await device.async_get_wl())
+
+        return detected
 
     async def async_get_device_name(self, device):
         """Return the name of the given device or None if we don't know."""
-        if device not in self.last_results:
-            return None
-        return self.last_results[device].name
+        if device not in self.cache:
+            # try to update the info if not found
+            await self.async_update_cache()
+            if device not in self.cache:
+                return None
 
-    async def async_update_info(self):
-        """Ensure the information from the ASUSWRT router is up to date.
+        return self.cache[device]['host']
 
-        Return boolean if scanning successful.
-        """
-        _LOGGER.debug("Checking Devices")
+    async def async_get_extra_attributes(self, device):
+        """Get the extra attributes of a device."""
+        if device not in self.cache:
+            # try to update the info if not found
+            await self.async_update_cache()
+            if device not in self.cache:
+                return None
 
-        self.last_results = await self.connection.async_get_connected_devices()
+        return self.cache[device]
+
+    async def async_update_cache(self):
+        self.cache = {}
+        for device in self.equipment:
+            if device.mode == 'router':
+                self.cache.update(await device.async_get_leases())

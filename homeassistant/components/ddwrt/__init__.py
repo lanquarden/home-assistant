@@ -20,7 +20,7 @@ CONF_REQUIRE_IP = "require_ip"
 CONF_SENSORS = "sensors"
 CONF_SSH_KEY = "ssh_key"
 
-DOMAIN = "asuswrt"
+DOMAIN = "ddwrt"
 DATA_DDWRT = DOMAIN
 DEFAULT_SSH_PORT = 22
 
@@ -35,7 +35,6 @@ DDWRT_SCHEMA = vol.Schema(
             vol.In(["ssh", "telnet", "http"]),
         vol.Optional(CONF_MODE, default="router"): vol.In(["router", "ap"]),
         vol.Optional(CONF_PORT, default=DEFAULT_SSH_PORT): cv.port,
-        vol.Optional(CONF_REQUIRE_IP, default=True): cv.boolean,
         vol.Exclusive(CONF_PASSWORD, SECRET_GROUP): cv.string,
         vol.Exclusive(CONF_SSH_KEY, SECRET_GROUP): cv.isfile,
         vol.Optional(CONF_SENSORS): vol.All(

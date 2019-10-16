@@ -11,8 +11,11 @@ _LOGGER = logging.getLogger(__name__)
 async def async_get_scanner(hass, config):
     """Validate the configuration and return an DD-WRT scanner."""
     scanner = DdWrtDeviceScanner(hass.data[DATA_DDWRT])
-    await scanner.async_connect()
-    return scanner if scanner.success_init else None
+    try:
+        await scanner.async_connect()
+    except ConnectionError:
+        return None
+    return scanner
 
 
 class DdWrtDeviceScanner(DeviceScanner):
@@ -22,25 +25,34 @@ class DdWrtDeviceScanner(DeviceScanner):
     def __init__(self, equipment):
         """Initialize the scanner."""
         self.cache = {}
-        self.success_init = False
         self.equipment = equipment
+        self.status = {}
 
     async def async_connect(self):
         """Initialize connection to the router."""
         # Test connection to all routers and aps.
-        self.success_init = True
         for device in self.equipment:
             _ = await device.async_get_wl()
-            if not device.is_connected:
-                self.success_init = False
+            self.status[device.host] = 'ONLINE'
 
     async def async_scan_devices(self):
         """Scan for new devices and return a list with found device IDs."""
         detected = []
         _LOGGER.debug("Scanning devices on DDWRT")
         for device in self.equipment:
-            detected.extend(await device.async_get_wl())
-
+            try:
+                detected.extend(await device.async_get_wl())
+            except ConnectionError:
+                if self.status[device.host] == 'ONLINE':
+                    _LOGGER.warning(f"Lost connection with ddwrt "
+                                    f"{device.host}")
+                self.status[device.host] = 'OFFLINE'
+                continue
+            # check if status needs to be updated
+            if self.status[device.host] == 'OFFLINE':
+                _LOGGER.warning(f"Connection re-established with ddwrt "
+                                f"{device.host}")
+                self.status[device.host] = 'ONLINE'
         return detected
 
     async def async_get_device_name(self, device):
@@ -67,5 +79,6 @@ class DdWrtDeviceScanner(DeviceScanner):
         """Update the extra information cache."""
         self.cache = {}
         for device in self.equipment:
-            if device.mode == 'router':
+            if device.mode == 'router' and \
+                    self.status[device.host] == 'ONLINE':
                 self.cache.update(await device.async_get_leases())

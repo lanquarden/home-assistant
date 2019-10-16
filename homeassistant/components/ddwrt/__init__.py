@@ -13,6 +13,7 @@ from homeassistant.const import (
 )
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.discovery import async_load_platform
+from homeassistant.exceptions import PlatformNotReady
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -61,10 +62,11 @@ async def async_setup(hass, config):
     equipment = []
     for dev_conf in conf:
         device = DdWrt(**dev_conf)
-        await device.async_get_wl()
-        if not device.is_connected:
-            _LOGGER.error("Unable to setup ddwrt component")
-            return False
+        try:
+            await device.async_get_wl()
+        except ConnectionError as e:
+            _LOGGER.debug(f"Failed to setup ddwrt platform: {e}")
+            raise PlatformNotReady
         equipment.append(device)
 
     hass.data[DATA_DDWRT] = equipment

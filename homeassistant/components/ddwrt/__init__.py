@@ -69,11 +69,12 @@ async def async_setup(hass, config):
 
     hass.data[DATA_DDWRT] = equipment
 
-    hass.async_create_task(
-        async_load_platform(
-            hass, "sensor", DOMAIN, config[DOMAIN].get(CONF_SENSORS), config
-        )
-    )
+    # hass.async_create_task(
+    #     async_load_platform(
+    #         hass, "sensor", DOMAIN, config[DOMAIN].get(CONF_SENSORS), config
+    #     )
+    # )
+
     hass.async_create_task(
         async_load_platform(hass, "device_tracker", DOMAIN, {}, config)
     )

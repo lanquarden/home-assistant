@@ -12,12 +12,11 @@ from homeassistant.const import (
     CONF_PROTOCOL,
 )
 from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.discovery import async_load_platform
+from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.exceptions import PlatformNotReady
 
 _LOGGER = logging.getLogger(__name__)
 
-CONF_REQUIRE_IP = "require_ip"
 CONF_SENSORS = "sensors"
 CONF_SSH_KEY = "ssh_key"
 
@@ -45,7 +44,7 @@ DDWRT_SCHEMA = vol.Schema(
 )
 CONFIG_SCHEMA = vol.Schema(
     {
-        DOMAIN: vol.Any(DDWRT_SCHEMA, [DDWRT_SCHEMA]),
+        DOMAIN: {cv.string, DDWRT_SCHEMA},
     },
     extra=vol.ALLOW_EXTRA,
 )
@@ -56,29 +55,21 @@ async def async_setup(hass, config):
     from aioddwrt.ddwrt import DdWrt
 
     conf = config[DOMAIN]
-    if not isinstance(conf, list):
-        conf = [conf]
 
-    equipment = []
-    for dev_conf in conf:
-        device = DdWrt(**dev_conf)
+    ddwrt = {}
+    for ddwrt_dev in conf:
+        if ddwrt_dev['protocol'] == 'http':
+            session = await async_get_clientsession(hass, verify_ssl=False)
+        else:
+            session = None
+        device = DdWrt(http_session=session, **ddwrt_dev)
         try:
             await device.async_get_wl()
         except ConnectionError as e:
             _LOGGER.debug(f"Failed to setup ddwrt platform: {e}")
             raise PlatformNotReady
-        equipment.append(device)
+        ddwrt[ddwrt_dev] = device
 
-    hass.data[DATA_DDWRT] = equipment
-
-    # hass.async_create_task(
-    #     async_load_platform(
-    #         hass, "sensor", DOMAIN, config[DOMAIN].get(CONF_SENSORS), config
-    #     )
-    # )
-
-    #hass.async_create_task(
-    #    async_load_platform(hass, "device_tracker", DOMAIN, {}, config)
-    #)
+    hass.data[DATA_DDWRT] = {'api': ddwrt, 'cache': {}}
 
     return True

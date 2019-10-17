@@ -27,7 +27,7 @@ async def async_get_scanner(hass, config):
         _LOGGER.warning(f"Did not find '{name}' in configured ddwrt"
                         f"platform devices: {','.join(data['api'].keys())}")
         return None
-    scanner = DdWrtDeviceScanner(data[name], data['cache'])
+    scanner = DdWrtDeviceScanner(data['api'][name], data['cache'])
     try:
         await scanner.async_connect()
     except ConnectionError:

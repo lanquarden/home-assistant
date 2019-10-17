@@ -84,7 +84,7 @@ class DdWrtDeviceScanner(DeviceScanner):
             # try to update the info if not found
             await self.async_update_cache()
             if device not in self.cache:
-                return None
+                return {}
 
         return self.cache[device]
 

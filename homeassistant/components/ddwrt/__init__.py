@@ -44,7 +44,7 @@ DDWRT_SCHEMA = vol.Schema(
 )
 CONFIG_SCHEMA = vol.Schema(
     {
-        DOMAIN: {cv.string, DDWRT_SCHEMA},
+        DOMAIN: {cv.string: DDWRT_SCHEMA},
     },
     extra=vol.ALLOW_EXTRA,
 )

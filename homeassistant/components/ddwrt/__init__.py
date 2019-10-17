@@ -40,7 +40,7 @@ DDWRT_SCHEMA = vol.Schema(
         vol.Optional(CONF_SENSORS): vol.All(
             cv.ensure_list, [vol.In(SENSOR_TYPES)]
         ),
-    }
+    }, extra=vol.ALLOW_EXTRA,
 )
 CONFIG_SCHEMA = vol.Schema(
     {
@@ -57,18 +57,18 @@ async def async_setup(hass, config):
     conf = config[DOMAIN]
 
     ddwrt = {}
-    for ddwrt_dev in conf:
-        if ddwrt_dev['protocol'] == 'http':
+    for name, ddwrt_conf in conf.items():
+        if ddwrt_conf[CONF_PROTOCOL] == 'http':
             session = await async_get_clientsession(hass, verify_ssl=False)
         else:
             session = None
-        device = DdWrt(http_session=session, **ddwrt_dev)
+        device = DdWrt(http_session=session, **ddwrt_conf)
         try:
             await device.async_get_wl()
         except ConnectionError as e:
             _LOGGER.debug(f"Failed to setup ddwrt platform: {e}")
             raise PlatformNotReady
-        ddwrt[ddwrt_dev] = device
+        ddwrt[name] = device
 
     hass.data[DATA_DDWRT] = {'api': ddwrt, 'cache': {}}
 

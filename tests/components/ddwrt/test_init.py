@@ -2,16 +2,12 @@
 from homeassistant.setup import async_setup_component
 
 from homeassistant.components.ddwrt import (
-    CONF_PROTOCOL,
-    CONF_MODE,
     DOMAIN,
-    CONF_PORT,
     DATA_DDWRT,
 )
-from homeassistant.const import CONF_PLATFORM, CONF_PASSWORD, CONF_USERNAME, \
-    CONF_HOST
+from homeassistant.const import CONF_PASSWORD, CONF_USERNAME, CONF_HOST
 
-from tests.common import MockDependency, mock_coro
+from tests.common import MockDependency, mock_coro_func
 
 
 async def test_conf_password_or_pub_key_required(hass):
@@ -25,7 +21,6 @@ async def test_conf_password_or_pub_key_required(hass):
         }
     }
     with MockDependency("aioddwrt.ddwrt") as mocked_ddwrt:
-        mocked_ddwrt.DdWrt().connection.async_connect = mock_coro()
         mocked_ddwrt.DdWrt().is_connected = False
         assert not await async_setup_component(hass, DOMAIN, config)
 
@@ -42,8 +37,7 @@ async def test_conf_password_no_pubkey(hass):
         }
     }
     with MockDependency("aioddwrt.ddwrt") as mocked_ddwrt:
-        mocked_ddwrt.DdWrt().connection.async_connect = mock_coro()
         mocked_ddwrt.DdWrt().connection.async_get_wl = \
-            mock_coro(return_value={})
+            mock_coro_func(return_value={})
         assert await async_setup_component(hass, DOMAIN, config)
         assert hass.data[DATA_DDWRT] is not None

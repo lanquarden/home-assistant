@@ -1,0 +1,1 @@
+"""Test DD-WRT device tracker setup."""

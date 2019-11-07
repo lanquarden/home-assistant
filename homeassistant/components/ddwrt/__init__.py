@@ -59,7 +59,7 @@ async def async_setup(hass, config):
     ddwrt = {}
     for name, ddwrt_conf in conf.items():
         if ddwrt_conf[CONF_PROTOCOL] == 'http':
-            session = await async_get_clientsession(hass, verify_ssl=False)
+            session = async_get_clientsession(hass, verify_ssl=False)
         else:
             session = None
         device = DdWrt(http_session=session, **ddwrt_conf)
